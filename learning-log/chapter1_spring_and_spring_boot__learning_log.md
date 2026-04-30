@@ -34,14 +34,14 @@
 
 ---
 
-## ■ つまずいたポイント
+# ■ つまずいたポイント
 - 教科書の「DIなし / DIあり」の比較を見ても意味が分からなかった
 - コードの違いは分かるが、**何が本質的に変わっているのか理解できなかった**
 - 「newを外に出すだけ」に見え、なぜ重要なのか納得できなかった
 
 ---
 
-# ■ 教科書の原文コード
+## ■ 教科書の原文コード
 
 ## ❌ DIなし
 UserServiceがEmailServiceを直接生成
@@ -80,7 +80,7 @@ UserService userService = new UserService(emailService);
 
 ---
 
-# ■ DIなしコードの検証
+## ■ DIなしコードの検証
 
 private EmailService emailService = new EmailService();
 
@@ -120,7 +120,7 @@ class SmsService {
 
 ---
 
-# ■ DIありコードの検証
+## ■ DIありコードの検証
 
 class UserService {
     private EmailService emailService;
@@ -166,7 +166,7 @@ EmailService emailService = new SmsService();
 
 ---
 
-# ■ 一番シンプルな理解
+## ■ 一番シンプルな理解
 
 - DIなし → new を自分で書く
 - DIあり → new を外に追い出す
@@ -182,7 +182,7 @@ EmailService emailService = new SmsService();
 
 ---
 
-# ■ Qiita記事からの理解 :contentReference[oaicite:0]{index=0}
+## ■ Qiita記事からの理解 :contentReference[oaicite:0]{index=0}
 
 ## ■ 問題の本質
 - クラス内で依存オブジェクトを生成すると
@@ -218,7 +218,7 @@ EmailService emailService = new SmsService();
 
 ---
 
-# ■ Springとの関係
+## ■ Springとの関係
 
 ## ■ DIはJavaだけでもできる
 - 手動でも実装可能
@@ -272,7 +272,7 @@ UserController
 
 ---
 
-# ■ 最終理解
+## ■ 最終理解
 
 DIとは：
 
@@ -281,7 +281,7 @@ DIとは：
 
 ---
 
-# ■ 自分の理解の変化
+## ■ 自分の理解の変化
 
 最初：
 - 「ただnewの位置が違うだけでは？」
@@ -292,17 +292,6 @@ DIとは：
 最終：
 - 「テスト可能性と依存制御のための設計」
 - 「Springはそれを自動化するための仕組み」
-
----
-
-# 学習ログ：依存性注入（DI）とSpringの構造
-
-## ■ つまずいたポイント①（DIの意味が分からない）
-- 教科書の「DIなし / DIあり」の比較を見ても意味が分からなかった
-- コードの違いは分かるが、何が本質的に変わっているのか理解できなかった
-- 「newを外に出すだけ」に見え、重要性が理解できなかった
-
-（※ここは前述の内容）
 
 ---
 

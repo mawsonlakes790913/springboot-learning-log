@@ -7,111 +7,179 @@
 
 ## ■ 3-1 シンプルなWebアプリケーション
 
-### ■ 手順
+### ■ 使用コード
 
-1. プロジェクト構成
-- Controllerクラス作成
-- templatesフォルダにHTML配置
+#### ● Controller（Java）
 
-2. HTML作成（hello.html）
-- Thymeleaf宣言を記述
-- Hello World表示
+    package com.example.demo.hello;
 
-3. Controller作成
+    import org.springframework.stereotype.Controller;
+    import org.springframework.web.bind.annotation.GetMapping;
 
-    @GetMapping("/hello")
-    public String getHello() {
-        return "hello";
+    @Controller
+    public class HelloController {
+
+        @GetMapping("/hello")
+        public String getHello() {
+            return "hello";
+        }
     }
 
-4. アプリ起動・確認
-- http://localhost:8080/hello にアクセス
+---
+
+#### ● HTML（hello.html）
+
+    <!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <title>Hello World</title>
+    </head>
+    <body>
+        <h1>Hello World</h1>
+    </body>
+    </html>
+
+---
+
+### ■ 何をしているか
+
+- ブラウザで `/hello` にアクセスする
+- Controllerの `@GetMapping("/hello")` が実行される
+- `return "hello"` により templates/hello.html が返される
+- 「Hello World」が表示される
 
 ---
 
 ### ■ 処理の流れ（GET）
 
-- ブラウザ → GET /hello  
-- Spring → @GetMapping("/hello") を探す  
-- Controller実行 → return "hello"  
-- ViewResolver → templates/hello.html に変換  
-- HTMLを返して表示  
-
----
-
-### ■ ポイント
-
-- @Controller → コントローラー定義  
-- @GetMapping → URLと処理の紐付け  
-- return → 表示するHTML（templatesからの相対パス）  
+ブラウザ → GET /hello  
+↓  
+Controller実行  
+↓  
+return "hello"  
+↓  
+templates/hello.html  
+↓  
+ブラウザ表示  
 
 ---
 
 ## ■ 3-2 画面から別画面に値を渡す
 
-### ■ 手順
+### ■ 使用コード
 
-1. フォーム追加（hello.html）
+#### ● HTML（hello.html）
 
-    <form method="post" action="/hello">
-        <input type="text" name="text1" />
-        <input type="submit" value="クリック" />
-    </form>
+    <!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <title>Hello World</title>
+    </head>
+    <body>
+        <h1>Hello World</h1>
 
-2. Controller修正
+        <form method="post" action="/hello">
+            <input type="text" name="text1" />
+            <input type="submit" value="クリック" />
+        </form>
 
-    @PostMapping("/hello")
-    public String postHello(@RequestParam("text1") String text1, Model model) {
-        model.addAttribute("response", text1);
-        return "hello/response";
+    </body>
+    </html>
+
+---
+
+#### ● Controller（Java）
+
+    package com.example.demo.hello;
+
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestParam;
+
+    @Controller
+    public class HelloController {
+
+        @GetMapping("/hello")
+        public String getHello() {
+            return "hello";
+        }
+
+        @PostMapping("/hello")
+        public String postHello(@RequestParam("text1") String text1, Model model) {
+            model.addAttribute("response", text1);
+            return "hello/response";
+        }
     }
 
-3. 表示用HTML作成（response.html）
+---
 
-    <p th:text="${response}"></p>
+#### ● HTML（response.html）
+
+    <!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <title>Hello Response</title>
+    </head>
+    <body>
+        <h1>Hello Response</h1>
+        <p th:text="${response}"></p>
+    </body>
+    </html>
+
+---
+
+### ■ 何をしているか
+
+- 入力欄に文字を入力して送信する
+- POST /hello が送られる
+- @PostMapping が実行される
+- 入力値が text1 に入る
+- Modelに response として保存する
+- response.html に遷移する
+- Thymeleafが値を埋め込む
+- 入力した文字が画面に表示される
 
 ---
 
 ### ■ 処理の流れ（POST）
 
-① GET /hello → 画面表示  
+GET /hello  
 ↓  
-② 入力 → text1=Spring  
+画面表示  
 ↓  
-③ POST /hello  
+入力（例：Spring）  
 ↓  
-④ @PostMapping 実行  
+POST /hello  
 ↓  
-⑤ @RequestParam → text1取得  
+@PostMapping 実行  
 ↓  
-⑥ Model → responseとして保存  
+@RequestParam → text1 = Spring  
 ↓  
-⑦ return "hello/response"  
+Model → response = Spring  
 ↓  
-⑧ response.html表示  
+return "hello/response"  
 ↓  
-⑨ th:text → 値を埋め込み表示  
+response.html  
+↓  
+th:text により表示  
+↓  
+Spring 表示  
 
 ---
 
-### ■ ポイント
+## ■ 重要ポイント
 
-- method="post" → POST送信  
-- action="/hello" → Controllerへ送信  
-- @PostMapping → POST受信  
-- @RequestParam → 入力値取得  
-- Model → データ受け渡し  
-- addAttribute → 名前＋値で保存  
-
----
-
-### ■ Thymeleaf
-
-    <p th:text="${response}"></p>
-
-- ${} → 値を取り出す（EL式）  
-- th:text → 表示する  
-- Thymeleaf → HTMLを書き換える  
+- form → データ送信の定義
+- input → 入力値を保持
+- @PostMapping → POST受信
+- @RequestParam → 入力値取得
+- Model → データ受け渡し
+- Thymeleaf → HTML書き換え
 
 ---
 
@@ -119,8 +187,8 @@
 
 | 項目 | GET | POST |
 |------|-----|------|
-| 用途 | 取得 | 送信 |
-| 送信方法 | URL | ボディ |
+| 用途 | 画面表示 | データ送信 |
+| データ位置 | URL | ボディ |
 
 ---
 
@@ -132,4 +200,4 @@
 - Model → データ渡す  
 - Thymeleaf → 表示  
 
-👉 入力 → 受け取り → 渡す → 表示
+入力 → 受け取り → 渡す → 表示

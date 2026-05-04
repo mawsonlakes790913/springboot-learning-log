@@ -87,43 +87,87 @@ URLに出ないならデータはどこにあるのか？
 HTMLの空欄にデータを埋めて完成させる仕組み。
 
 従来：
-<p>Hello Naoki</p>（固定）
+\<p>Hello Naoki</p>（固定）
 
 テンプレート：
-<p>Hello ○○</p>（後から変わる）
+\<p>Hello ○○</p>（後から変わる）
 
 例：
-
-<p th:text="${name}"></p>  
+\<p th:text="${name}"></p>  
 model.addAttribute("name", "Naoki");
 
 結果：
+\<p>Naoki</p>
 
-<p>Naoki</p>
-
-つまり、
-
-HTMLは最初から完成しているのではなく、  
-後からデータを埋め込んで完成することがある。
+つまり、HTMLは最初から完成しているのではなく、後からデータを埋め込んで完成することがある。
 
 ---
 
 ## ◆ Thymeleaf
 
-Spring Bootで使われるテンプレートエンジン。
+Spring Bootで使用されるテンプレートエンジンであり、
+「HTMLの中にサーバー側のデータ（Model）を埋め込んで、最終的なHTMLを生成する仕組み」
+である。
 
-重要ポイント：
+---
 
-<p th:text="${name}"></p>
+### ■ なぜ必要なのか
 
-- th:text → このタグの中身を書き換える
-- ${name} → nameというデータを取り出す
+通常のHTMLは固定された内容しか表示できない。
 
-組み合わせると、
+例：
+\<p>Hello Naoki</p>
 
-「nameの値をここに表示する」
+この場合、常に「Naoki」と表示される。
+しかしWebアプリでは、
 
-という意味になる。
+- ユーザー入力
+- データベースの値
+
+などによって表示内容を変える必要がある。
+そのため、HTMLの中に「後からデータを差し込む仕組み」が必要になる。
+それを担うのがThymeleafである。
+
+---
+
+### ■ 基本構文
+
+\<p th:text="${name}"></p>
+
+この1行は、次の2つの要素で構成されている：
+
+- th:text → 表示内容を書き換える命令（Thymeleafの属性）
+- ${name} → Modelからnameというデータを取り出す（EL式）
+
+---
+
+### ■ 実際の処理の流れ
+
+Controller側：
+model.addAttribute("name", "Naoki");
+
+この時点でModelの中は  name → "Naoki"  という状態になっている。
+
+---
+
+HTML側：
+\<p th:text="${name}"></p>
+
+ThymeleafがこのHTMLを処理する際に、
+
+1. ${name} を評価する
+2. Modelの中から name を探す
+3. "Naoki" を取得する
+4. th:text によってタグの中身を書き換える
+
+---
+
+### ■ 最終的に生成されるHTML
+
+<p>Naoki</p>
+
+つまり、Thymeleafは「HTMLを直接表示するのではなく、一度処理して完成HTMLを作ってから表示する」
+という仕組みになっている。
 
 ---
 
@@ -132,106 +176,397 @@ Spring Bootで使われるテンプレートエンジン。
 ControllerからHTMLにデータを渡すための箱。
 
 例：
-
 model.addAttribute("name", "Naoki");
 
 意味：
-
 - "name" → キー（ラベル）
 - "Naoki" → 値
 
-Modelの中では
-
-name → "Naoki"
-
-という形で保持される。
+Modelの中では   name → "Naoki"   という形で保持される。
 
 重要：
-
-これは変数ではなく、
-
-「キーと値のセット」
-
-である。
+これは変数ではなく、「キーと値のセット」である。
 
 ---
 
 ## ◆ コントローラー
 
-ブラウザからのリクエストを受け取り、どの画面を返すか決める役。
+コントローラーとは、
+「ブラウザから送られてきたリクエストを受け取り、その内容に応じてどの処理を行い、どの画面を返すかを決める役割」
+を持つクラスである。
 
-例：
+---
+
+### ■ 具体例
 
 @GetMapping("/hello")  
 public String getHello() {  
     return "hello";  
 }
 
-意味：
+---
 
-- /hello にアクセスが来たらこのメソッドを実行
-- return "hello" → templates/hello.html を表示
+### ■ 何が起きているか（処理の流れ）
+
+ブラウザで以下のURLにアクセスする：
+http://localhost:8080/hello
+
+このとき、内部では次のような処理が行われている：
+1. ブラウザがサーバーにリクエストを送る  
+   → GET /hello
+
+2. Springがリクエストを受け取る  
+   → 「/hello に対応する処理はどれか？」を探す
+
+3. @GetMapping("/hello") が一致  
+   → getHello() メソッドが呼ばれる
+
+4. メソッドが実行される  
+   → return "hello" を返す
+
+5. Springが「hello」というビュー名を受け取る  
+
+6. ViewResolverが  
+   → templates/hello.html を探す
+
+7. hello.html をブラウザに返す
 
 ---
 
 ## 【疑問】
 
-### ① @GetMappingは何か
+### 【疑問①】@GetMappingは何か
 
-結論：
-
-Springが提供しているアノテーションであり、
-
-「/hello へのGETリクエストはこのメソッドで処理する」
-
-という意味を持つ。
-
-Java単体では意味を持たない。
+@GetMapping("/hello")　は、Springが提供するアノテーションであり、
+「GETメソッドで /hello にアクセスが来たときに、このメソッドを実行する」という対応関係を定義している。
 
 ---
 
-### ② なぜ return "hello" でHTMLが表示されるのか
+### ■ 何をしているのか（より具体的に）
 
-Springのルール：
+Springはアプリ起動時に、
 
-- returnの文字列は「ビュー名」
-- templatesフォルダから対応するHTMLを探す
+- どのクラスがControllerか（@Controller）
+- どのメソッドがどのURLに対応しているか（@GetMapping など）
 
-これを行っているのがViewResolver
-
----
-
-### ③ Controllerの構成
-
-- 1つにまとめることも可能
-- 複数に分けることも可能（実務では分割）
-
----
-
-### ④ ViewResolverの注意点
-
-同名ファイルが複数ある場合：
-
-return "hello" では特定できない
-
-→ 相対パスが必要
+をすべて読み取り、「URLとメソッドの対応表（ルーティング情報）」を内部に作成する。
 
 例：
-return "test/hello"
+@GetMapping("/hello")  
+public String getHello() {  
+    return "hello";  
+}
+は内部的に、　GET /hello → getHello() 　を実行
+というルールとして登録される。
 
 ---
 
-### ⑤ URLは自分で決める
+### ■ リクエスト時の動き
 
-@GetMappingで定義したものだけが有効
+ブラウザから　GET /hello　というリクエストが来ると、
+
+1. Springがリクエストを受け取る  
+2. URL（/hello）とHTTPメソッド（GET）を確認する  
+3. 登録済みの対応表から一致するものを探す  
+4. @GetMapping("/hello") が一致  
+5. getHello() メソッドを呼び出す  
+
+という処理が行われる。
 
 ---
 
-### ⑥ @Controllerの役割
+### ■ なぜ「Java単体では意味を持たない」のか
 
-Springにクラスを認識させる
+@GetMapping はJavaの文法ではなく、
 
-これがないとURLアクセスしても反応しない
+- if文
+- for文
+のような標準機能ではない。
+これはSpringが用意したアノテーションであり、Springがそれを読み取って処理を振り分けているため、
+Springが存在しない環境では単なる「目印」にすぎない。
+
+---
+
+### 【疑問②】なぜ return "hello" でHTMLが表示されるのか
+
+@GetMapping("/hello")  
+public String getHello() {  
+    return "hello";  
+}
+
+この return "hello" はHTMLそのものではなく、
+「表示する画面の名前（ビュー名）」を返しているだけである。
+
+ではなぜこれでHTMLが表示されるのかというと、
+Springの内部で ViewResolver（ビューリゾルバー）という仕組みが動いているためである。
+
+---
+
+### ■ ViewResolverの役割
+
+ViewResolverは、「Controllerが返したビュー名を、実際のHTMLファイルの場所に変換する役割」を持つ。
+
+---
+
+### ■ 具体的に何をしているのか
+
+return "hello";
+と書いたとき、ViewResolverは次のような処理を行う：
+
+1. "hello" をビュー名として受け取る  
+2. 既定のルールに従ってパスを組み立てる  
+
+例（Spring Bootのデフォルト設定）：
+templates/ + hello + .html   →　 templates/hello.html
+
+3. そのファイルを探す  
+4. 見つかったHTMLをレスポンスとして返す
+
+---
+
+### ■ 重要なポイント
+
+- returnしているのはHTMLではなく「名前」だけ
+- 実際のファイル探索はViewResolverが行う
+- ファイルの場所や拡張子はルールで決まっている
+
+---
+
+### ■ ルール（デフォルト）
+
+Spring Bootでは通常：
+
+- フォルダ → templates
+- 拡張子 → .html
+
+したがって、return "hello"は自動的に　templates/hello.html　に変換される
+
+
+---
+
+### 【疑問③】コントローラーは1つなのか？それとも複数存在するのか？
+
+最初の疑問：
+コントローラーは1つだけ存在するのか、それとも複数作れるのかが分からなかった。
+
+また、1つのコントローラーに複数の @GetMapping を持たせるのか、  
+それとも機能ごとに分けるべきなのかが不明だった。
+
+---
+
+### ■ 実際に確認した結果
+
+結論としては、どちらも可能であり、制限はない。
+
+---
+
+### ■ パターン①：1つのコントローラーにまとめる
+
+@Controller  
+public class HelloController {
+
+    @GetMapping("/hello")
+    public String hello() {
+        return "hello";
+    }
+
+    @GetMapping("/world")
+    public String world() {
+        return "world";
+    }
+}
+
+この場合：
+- 1つのクラスが複数のURLを担当する
+- 小規模なアプリでは問題ない
+
+---
+
+### ■ パターン②：複数のコントローラーに分ける
+
+@Controller  
+public class HelloController {
+
+    @GetMapping("/hello")
+    public String hello() {
+        return "hello";
+    }
+}
+
+@Controller  
+public class WorldController {
+
+    @GetMapping("/world")
+    public String world() {
+        return "world";
+    }
+}
+
+この場合：
+- URLごとに責任を分離できる
+- クラスごとの役割が明確になる
+
+---
+
+### ■ なぜ実務では分けるのか
+
+1つのクラスにすべて書くと、
+
+- コード量が増える
+- 可読性が下がる
+- 修正時の影響範囲が広くなる
+
+そのため、機能単位でコントローラーを分割するのが一般的である。
+
+---
+
+### 【疑問④】ViewResolverは同名ファイルをどう扱うのか？
+
+最初の疑問：
+templatesフォルダ内に同じ名前のHTMLファイルが複数存在する場合、
+
+例：
+templates/
+ ├── test/
+ │    └── hello.html
+ └── deploy/
+      └── hello.html
+
+このとき、　return "hello";　と書いた場合に、どのhello.htmlが選ばれるのかが不明だった。
+
+---
+
+### ■ 実際の挙動
+
+結論：
+return "hello";　では特定できないため、正しく動作しない。
+
+---
+
+### ■ 理由
+
+ViewResolverは基本的に「ビュー名をそのままパスに変換する」だけであり、
+曖昧な検索や優先順位判断は行わない。
+
+つまり、　hello → templates/hello.html　という単純な変換しかできない。
+
+---
+
+### ■ 正しい指定方法
+
+フォルダ構造を含めた相対パスを明示する必要がある。
+
+例：
+return "test/hello";  
+return "deploy/hello";
+
+---
+
+### 【疑問⑤】URLは誰が決めているのか？自動で決まるのか？
+
+最初の疑問：
+ブラウザでアクセスするURL（/hello や /world）は、
+
+- Springが自動で決めているのか
+- それとも開発者が自分で決めているのか
+
+が分からなかった。
+
+---
+
+### ■ 実際の挙動
+
+結論：
+URLは自動では決まらず、@GetMapping や @PostMapping で開発者が明示的に定義したものだけが有効になる。
+
+---
+
+### ■ 具体例
+
+@GetMapping("/hello")  
+public String getHello() {  
+    return "hello";  
+}
+
+この場合：
+
+- 有効なURL → /hello
+- それ以外のURL（例：/world）→ 対応する定義がなければエラー（404）
+
+---
+
+### ■ 別の例（意図的にずらした場合）
+
+@GetMapping("/world")  
+public String getHello() {  
+    return "hello";  
+}
+
+この場合：
+
+- /world にアクセス → hello.html が表示される
+- /hello にアクセス → 何も起きない（404）
+
+---
+
+### 【疑問⑥】@Controllerがないと何が起きるのか？
+
+最初の疑問：
+@Controller を付ける意味が分からず、
+
+- なくても動くのではないか
+- 単なる目印ではないのか
+
+という疑問があった。
+
+---
+
+### ■ 実際の挙動
+
+結論：
+@Controller が付いていないクラスは、Springに「コントローラー」として認識されないため、
+@GetMapping("/hello")を書いてもURLアクセス時に一切呼び出されない。
+
+---
+
+### ■ 具体例
+
+@Controller がある場合：
+
+@Controller  
+public class HelloController {
+
+    @GetMapping("/hello")
+    public String hello() {
+        return "hello";
+    }
+}
+
+→ /hello にアクセスすると表示される
+
+---
+
+@Controller がない場合：
+
+public class HelloController {
+
+    @GetMapping("/hello")
+    public String hello() {
+        return "hello";
+    }
+}
+
+→ /hello にアクセスしても反応しない（404）
+
+---
+
+### ■ なぜこうなるのか
+
+Springはアプリ起動時に、「どのクラスをコントローラーとして扱うか」をスキャンして決定している。
+その判断基準が @Controller であり、これが付いているクラスだけが
+
+- URLと紐づけられ
+- リクエスト処理の対象になる
 
 ---
 
@@ -247,14 +582,12 @@ Springにクラスを認識させる
 4. action / method追加 → 完全
 
 完成形：
-
-<form action="/submit" method="post">
-    <input type="text" name="fruit">
-    <button type="submit">送信</button>
-</form>
+\<form action="/submit" method="post">
+    \<input type="text" name="fruit">
+    \<button type="submit">送信</button>
+\</form>
 
 意味：
-
 入力データをfruitという名前で、/submitにPOSTで送る
 
 ---
@@ -267,17 +600,13 @@ Springにクラスを認識させる
 - name → データのラベル
 
 重要：
-
-nameは変数ではなく、
-
-「送信時のキー」
+nameは変数ではなく、「送信時のキー」
 
 ---
 
 ## ◆ buttonタグ
 
 <button type="submit">送信</button>
-
 押すことでPOSTリクエストが発生する
 
 ---
@@ -287,11 +616,8 @@ nameは変数ではなく、
 @PostMapping("/submit")
 
 意味：
-
 「/submit に対してPOSTリクエストが来たときに、このメソッドを実行する」という指定である。
-
 ここで重要なのは「URLだけでなく、HTTPメソッド（GETかPOSTか）も含めて判断している」という点。
-
 例えば同じ /submit でも：
 
 - GET /submit → @GetMapping が処理
@@ -300,34 +626,25 @@ nameは変数ではなく、
 というように、同じURLでも別の処理として扱われる。
 
 実際の流れ：
-
 <form action="/submit" method="post">
 <input type="text" name="fruit">
 <button type="submit">送信</button>
 </form>
 
 ユーザーが「apple」と入力して送信すると、
-
 POST /submit  
 fruit=apple  
-
 というリクエストがサーバーに送られる。
 
 Springはこのリクエストを受け取り、
-
 1. URLが /submit
 2. メソッドが POST
-
 であることを確認し、
 
-@PostMapping("/submit")
-
-に対応するメソッドを呼び出す。
+@PostMapping("/submit")に対応するメソッドを呼び出す。
 
 つまり@PostMappingは、
-
 「どのリクエストを、どのJavaメソッドで処理するかを決めるルーティングの役割」
-
 を持っている。
 
 
@@ -338,24 +655,12 @@ Springはこのリクエストを受け取り、
 最大の疑問ポイント。
 
 理由：
-
-Javaは
-
-「fruitがどこから来たか分からない」
-
-ため、
-
-@RequestParam String fruit
-
-と書くことで、
-
-「fruitという名前のデータをこの引数に入れる」
-
-と明示する。
+Javaは「fruitがどこから来たか分からない」ため、
+@RequestParam String fruitと書くことで、「fruitという名前のデータをこの引数に入れる」と明示する。
 
 ---
 
-## ◆ 処理の流れ（具体）
+### ◆ 処理の流れ（具体）
 
 <form action="/submit" method="post">
 <input type="text" name="fruit">
@@ -386,41 +691,23 @@ return "result"
 ## ◆ Modelの必要性
 
 疑問：
-
 @PostMappingで
-
 public String submitForm(@RequestParam String fruit)
-
 のようにfruitを受け取っているなら、そのままHTMLで使えるのではないか？
 
 結論：
-
 そのままではHTMLには渡らない。
 
 理由：
-
 Java（Controller）とHTML（Thymeleaf）は、直接同じ変数を共有しているわけではないため。
-
 より具体的に説明すると、
+Controllerの中で fruit = "apple" という状態になっていても、
+その値はあくまで「Javaのメソッド内のローカル変数」であり、そのままではHTML側には一切見えない。
 
-Controllerの中で
-
-fruit = "apple"
-
-という状態になっていても、
-
-その値はあくまで「Javaのメソッド内のローカル変数」であり、
-
-そのままではHTML側には一切見えない。
-
-HTML側（Thymeleaf）は、
-
-Controllerの変数を直接参照することはできず、
-
+HTML側（Thymeleaf）は、Controllerの変数を直接参照することはできず、
 参照できるのは「Modelに登録されたデータだけ」である。
 
 つまり、
-
 Controller（Java）側：
 fruit = "apple"（ローカル変数）
 
@@ -437,43 +724,29 @@ model.addAttribute("fruit", fruit);
 - fruit → 実際の値（"apple"）
 
 をModelに登録する。
-
-すると内部的には、
-
-Modelの中に
+すると内部的には、Modelの中に
 
 fruit → "apple"
 
 というデータが保持される。
-
 その状態で
 
 return "result";
 
-とすると、
-
-Springは
+とすると、Springは
 
 - result.html に遷移する
 - 同時にModelの中身もHTMLに渡す
 
 という処理を行う。
-
 その結果、HTML側で
 
 <p th:text="${fruit}"></p>
 
 と書くと、
+Modelの中からfruitを探し、"apple" を取り出して表示することができる。
 
-Modelの中からfruitを探し、
-
-"apple" を取り出して表示することができる。
-
-つまりModelの役割は、
-
-「Javaの変数を、そのまま渡すのではなく、HTMLから参照可能な形に変換して橋渡しすること」
-
-である。
+つまりModelの役割は、「Javaの変数を、そのまま渡すのではなく、HTMLから参照可能な形に変換して橋渡しすること」である。
 
 ---
 
@@ -482,46 +755,24 @@ Modelの中からfruitを探し、
 model.addAttribute("fruit", fruit);
 
 意味：
-
-この1行は、
-
-「Javaの変数で持っている値を、HTML側から参照できる形に登録する処理」
-
-である。
-
+この1行は、「Javaの変数で持っている値を、HTML側から参照できる形に登録する処理」である。
 より具体的には、
 
 - "fruit" → HTMLから取り出すときの名前（キー）
 - fruit → Javaの変数（例："apple"）
 
 という対応関係を作っている。
-
-例えば、
-
-@RequestParam String fruit
-
-によって
-
+例えば、 @RequestParam String fruit によって
 fruit = "apple"
-
-という状態になっていた場合、
-
+という状態になっていた場合、 
 model.addAttribute("fruit", fruit);
-
 を実行すると、Modelの中は次のようになる：
 
 fruit → "apple"
 
-ここで重要なのは、
+ここで重要なのは、これは「変数を渡している」のではなく、「キーと値のセットとして登録している」という点である。
 
-これは「変数を渡している」のではなく、
-
-「キーと値のセットとして登録している」という点である。
-
-Javaのローカル変数はそのままではHTMLに渡らないため、
-
-Modelという入れ物に入れることで、
-
+Javaのローカル変数はそのままではHTMLに渡らないため、Modelという入れ物に入れることで、
 初めてHTML側から参照できる状態になる。
 
 ---
@@ -531,11 +782,8 @@ Modelという入れ物に入れることで、
 <p th:text="${fruit}"></p>
 
 意味：
-
 このコードは、
-
 「Modelの中からfruitという名前のデータを取り出して、このタグの中身として表示する」
-
 という処理を行う。
 
 流れとしては：
@@ -553,13 +801,10 @@ Modelという入れ物に入れることで、
 
 5. 最終的にHTMLは
 
-<p>apple</p>
+\<p>apple</p>
 
 としてブラウザに送られる
-
-ここで重要なのは、
-
-th:textは「HTMLの表示内容を書き換える」役割を持つという点である。
+ここで重要なのは、th:textは「HTMLの表示内容を書き換える」役割を持つという点である。
 
 ---
 
@@ -568,21 +813,10 @@ th:textは「HTMLの表示内容を書き換える」役割を持つという点
 ${...} の形で記述されるものをEL式（Expression Language）という。
 
 役割：
-
 「Modelに登録されたデータを取り出すための記法」
 
 基本動作：
-
-${fruit}
-
-と書くと、
-
-Modelの中から
-
-fruit → "apple"
-
-というデータを探し、
-
+${fruit}と書くと、Modelの中から fruit → "apple" というデータを探し、
 その値である "apple" を取得する。
 
 ---
@@ -600,12 +834,9 @@ ${fruit}
 ${user.name}
 
 → Modelに
-
 user → { name: "Naoki" }
 
-のようなデータが入っている場合、
-
-userの中のnameを取り出す
+のようなデータが入っている場合、userの中のnameを取り出す
 
 ---
 
@@ -613,12 +844,7 @@ userの中のnameを取り出す
 ${age + 1}
 
 → Modelに
-
-age → 20
-
-があれば、
-
-21として表示される
+age → 20があれば、21として表示される
 
 ---
 
@@ -641,10 +867,7 @@ age → 20
 - Spring
 
 が同時に出てきたためである。
-
-それぞれ単体なら理解可能だが、
-
-組み合わさることで急激に難易度が上がった。
+それぞれ単体なら理解可能だが、組み合わさることで急激に難易度が上がった。
 
 ---
 
@@ -677,14 +900,5 @@ age → 20
 
 # ■ 結論
 
-この章は文法ではなく、
-
-「Webアプリケーションの構造そのもの」
-
-を理解する章である。
-
-また、難しく感じた理由は、
-
-Javaの知識不足ではなく、
-
-複数の仕組みを同時に理解する必要があったためである。
+この章は文法ではなく、「Webアプリケーションの構造そのもの」を理解する章である。
+また、難しく感じた理由は、Javaの知識不足ではなく、複数の仕組みを同時に理解する必要があったためである。
